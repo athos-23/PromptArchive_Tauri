@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "identifier": "com.faberos.promptarchive",
   "build": {
-    "beforeBuildCommand": "cd ../frontend && npm install && npm run build",
+    "beforeBuildCommand": "npm --prefix ../frontend ci && npm --prefix ../frontend run build",
     "frontendDist": "../frontend/out"
   },
   "app": {
