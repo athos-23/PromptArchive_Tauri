@@ -1,0 +1,83 @@
+name: Build Windows EXE
+
+# Si avvia manualmente dal tab "Actions" su GitHub, oppure automaticamente
+# quando pushi un tag tipo v1.0.0
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # ---- 1. Costruzione del backend Python come exe standalone ----
+      - name: Install backend dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pyinstaller
+
+      - name: Build backend sidecar (.exe)
+        run: pyinstaller promptarchive_backend.spec
+        shell: bash
+
+      - name: Move & rename sidecar for Tauri (target triple richiesto)
+        run: |
+          mkdir -p src-tauri/binaries
+          cp dist/promptarchive-backend.exe src-tauri/binaries/promptarchive-backend-x86_64-pc-windows-msvc.exe
+        shell: bash
+
+      # ---- 2. Dipendenze frontend + root (CLI Tauri) ----
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: frontend
+
+      - name: Install root dependencies
+        run: npm install
+
+      # ---- 3. Build dell'app Tauri (compila anche il frontend via beforeBuildCommand) ----
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: .
+          tagName: ${{ github.ref_name }}
+          releaseName: "PromptArchive v__VERSION__"
+          releaseBody: "Build automatica generata da GitHub Actions."
+          releaseDraft: true
+          prerelease: false
+          args: --target x86_64-pc-windows-msvc
+
+      # Se il workflow parte manualmente (workflow_dispatch, senza tag),
+      # tauri-action non crea una release: carichiamo comunque l'installer
+      # come artifact scaricabile dalla pagina della run.
+      - name: Upload installer as artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PromptArchive-Windows-Installer
+          path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
