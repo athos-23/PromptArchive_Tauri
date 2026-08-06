@@ -62,17 +62,17 @@ jobs:
 
       # ---- 3. Build dell'app Tauri (compila anche il frontend via beforeBuildCommand) ----
       - name: Build Tauri app
-  uses: tauri-apps/tauri-action@v0
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  with:
-    projectPath: src-tauri
-    tagName: ${{ github.ref_name }}
-    releaseName: "PromptArchive v__VERSION__"
-    releaseBody: "Build automatica generata da GitHub Actions."
-    releaseDraft: true
-    prerelease: false
-    args: --target x86_64-pc-windows-msvc
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: .
+          tagName: ${{ github.ref_name }}
+          releaseName: "PromptArchive v__VERSION__"
+          releaseBody: "Build automatica generata da GitHub Actions."
+          releaseDraft: true
+          prerelease: false
+          args: --target x86_64-pc-windows-msvc
 
       # Se il workflow parte manualmente (workflow_dispatch, senza tag),
       # tauri-action non crea una release: carichiamo comunque l'installer
